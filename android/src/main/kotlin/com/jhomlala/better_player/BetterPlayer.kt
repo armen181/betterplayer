@@ -412,23 +412,27 @@ internal class BetterPlayer(
                 DefaultSsChunkSource.Factory(mediaDataSourceFactory),
                 DefaultDataSource.Factory(context, mediaDataSourceFactory)
             )
-                .setDrmSessionManagerProvider(drmSessionManagerProvider)
-                .createMediaSource(mediaItem)
+                .apply {
+                    drmSessionManagerProvider?.let { setDrmSessionManagerProvider(it) }
+                }.createMediaSource(mediaItem)
             C.TYPE_DASH -> DashMediaSource.Factory(
                 DefaultDashChunkSource.Factory(mediaDataSourceFactory),
                 DefaultDataSource.Factory(context, mediaDataSourceFactory)
             )
-                .setDrmSessionManagerProvider(drmSessionManagerProvider)
-                .createMediaSource(mediaItem)
+                .apply {
+                    drmSessionManagerProvider?.let { setDrmSessionManagerProvider(it) }
+                }.createMediaSource(mediaItem)
             C.TYPE_HLS -> HlsMediaSource.Factory(mediaDataSourceFactory)
-                .setDrmSessionManagerProvider(drmSessionManagerProvider)
-                .createMediaSource(mediaItem)
+                .apply {
+                    drmSessionManagerProvider?.let { setDrmSessionManagerProvider(it) }
+                }.createMediaSource(mediaItem)
             C.TYPE_OTHER -> ProgressiveMediaSource.Factory(
                 mediaDataSourceFactory,
                 DefaultExtractorsFactory()
             )
-                .setDrmSessionManagerProvider(drmSessionManagerProvider)
-                .createMediaSource(mediaItem)
+                .apply {
+                    drmSessionManagerProvider?.let { setDrmSessionManagerProvider(it) }
+                }.createMediaSource(mediaItem)
             else -> {
                 throw IllegalStateException("Unsupported type: $type")
             }
@@ -508,12 +512,12 @@ internal class BetterPlayer(
         val audioComponent = exoPlayer?.audioComponent ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             audioComponent.setAudioAttributes(
-                AudioAttributes.Builder().setContentType(C.CONTENT_TYPE_MOVIE).build(),
+                AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
                 !mixWithOthers
             )
         } else {
             audioComponent.setAudioAttributes(
-                AudioAttributes.Builder().setContentType(C.CONTENT_TYPE_MUSIC).build(),
+                AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
                 !mixWithOthers
             )
         }
@@ -707,15 +711,10 @@ internal class BetterPlayer(
         if (mappedTrackInfo != null) {
             val builder = trackSelector.parameters.buildUpon()
                 .setRendererDisabled(rendererIndex, false)
-                .setTrackSelectionOverrides(
-                    TrackSelectionOverrides.Builder().addOverride(
-                        TrackSelectionOverrides.TrackSelectionOverride(
-                            mappedTrackInfo.getTrackGroups(
-                                rendererIndex
-                            ).get(groupIndex)
-                        )
-                    ).build()
-                )
+                .clearSelectionOverrides(rendererIndex)
+
+            val selectionOverride = DefaultTrackSelector.SelectionOverride(groupIndex, groupElementIndex)
+            builder.setSelectionOverride(rendererIndex, trackGroups, selectionOverride)
 
             trackSelector.setParameters(builder)
         }
